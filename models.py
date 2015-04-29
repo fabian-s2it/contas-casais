@@ -1,13 +1,17 @@
-from flask import Flask
-from flask.ext.sqlalchemy import SQLAlchemy
 from hashlib import md5
 from app import db
-import json
 
-couple = db.Table('couple',
-	db.Column('user_id_c1', db.Integer, db.ForeignKey('user.id')),
-	db.Column('user_id_c2', db.Integer, db.ForeignKey('user.id'))
-)
+class Couple(db.Model):
+
+    __tablename__ = 'couple'
+
+    user_id_c1 = db.Column(db.Integer, db.ForeignKey('user.id'))
+    user_id_c2 = db.Column(db.Integer, db.ForeignKey('user.id'))
+
+    def __init__(self, c1, c2):
+        self.user_id_c1 = c1
+        self.user_id_c2 = c2
+
 
 class User(db.Model):
 
@@ -29,21 +33,26 @@ class User(db.Model):
     def passwordify(self):
         self.password = (md5(self.email.encode('utf-8')).hexdigest(), 18)
 
+    def create_couple(self, couple_id):
+        couple = Couple(self.id, couple_id)
+        db.session.add(couple)
+        db.session.commit()
+
     @property
     def serialize(self):
-       """Return object data in easily serializeable format"""
        return {
            'id'         : self.id,
            'username': self.username,
            'email': self.email,
            'password': self.password
        }
-    @property
-    def serialize_many2many(self):
-       """
-       Return object's relations in easily serializeable format.
-       NB! Calls many2many's serialize property.
-       """
-       return [ item.serialize for item in self.many2many]
+
+    # @property
+    # def serialize_many2many(self):
+    #    """
+    #    Return object's relations in easily serializeable format.
+    #    NB! Calls many2many's serialize property.
+    #    """
+    #    return [ item.serialize for item in self.many2many]
 
 

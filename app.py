@@ -1,11 +1,8 @@
-from flask import Flask, jsonify
+from flask import Flask
 from flask.ext import restful
 from flask.ext.sqlalchemy import SQLAlchemy
 from flask.ext.restful import reqparse, abort, Api, Resource
 from models import *
-import json
-
-
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql://root@localhost/contas'
@@ -18,13 +15,13 @@ parser.add_argument('username', type=str)
 parser.add_argument('email', type=str)
 parser.add_argument('password', type=str)
 
-class Users(restful.Resource):
+class Users(Resource):
     def get(self, user_id):
         user = User.query.get(user_id)
         return user.serialize
 
 
-class UserList(restful.Resource):
+class UserList(Resource):
     def post(self):
         args = parser.parse_args()
 
@@ -32,8 +29,7 @@ class UserList(restful.Resource):
         db.session.add(user)
         db.session.commit()
 
-        return True, 200    
-
+        return True, 200
 
 api.add_resource(Users, '/users/<user_id>')
 api.add_resource(UserList, '/user/')
