@@ -5,8 +5,8 @@ class Couple(db.Model):
 
     __tablename__ = 'couple'
 
-    user_id_c1 = db.Column(db.Integer, db.ForeignKey('user.id'))
-    user_id_c2 = db.Column(db.Integer, db.ForeignKey('user.id'))
+    user_id_c1 = db.Column(db.Integer, db.ForeignKey('user.id'), primary_key=True)
+    user_id_c2 = db.Column(db.Integer, db.ForeignKey('user.id'), primary_key=True)
 
     def __init__(self, c1, c2):
         self.user_id_c1 = c1
