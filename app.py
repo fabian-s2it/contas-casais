@@ -37,8 +37,8 @@ class Users(Resource):
 class UserList(Resource):
     def post(self):
         args = parser.parse_args()
-
         user = User(args['username'], args['email'], args['password'])
+
         db.session.add(user)
         db.session.commit()
 
