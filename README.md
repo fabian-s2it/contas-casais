@@ -14,3 +14,13 @@
 - Create the app entire HTML
 
 
+
+## Installing the app:
+
+
+```python
+from yourapplication import db
+db.create_all()
+```
+
+
