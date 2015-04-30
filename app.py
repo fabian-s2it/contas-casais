@@ -17,11 +17,22 @@ api = restful.Api(app)
 
 @auth.verify_password
 def verify_password(username, password):
-    user = User.query.filter_by(username=username, password=password).first()
 
+    if 'token' not in session:
+        if username and password:
+            user = User.query.filter_by(username=username).first()
+            correct_password = user.check_password(password)
+
+            if correct_password:
+                user.generate_token(user.id)
+                session['token'] = user.token
+        else:
+            return None
+    else:
+        user = User.query.filter_by(token=session['token']).first()
     if user:
-        session['username'] = user.username
         return True
+
     return None
 
 

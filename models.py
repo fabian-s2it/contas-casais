@@ -1,6 +1,7 @@
-from hashlib import md5
+from hashlib import md5, sha1
 from app import db
 from datetime import datetime
+import os
 
 class Couple(db.Model):
 
@@ -9,10 +10,24 @@ class Couple(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id_c1 = db.Column(db.Integer, db.ForeignKey('user.id'))
     user_id_c2 = db.Column(db.Integer, db.ForeignKey('user.id'))
+    transactions = db.relationship('CoupleTransaction', backref='couple_transaction', lazy='dynamic')
 
     def __init__(self, c1, c2):
         self.user_id_c1 = c1
         self.user_id_c2 = c2
+
+
+    @property
+    def serialize(self):
+
+        user_id_c1 = User.query.get(self.user_id_c1)
+        user_id_c2 = User.query.get(self.user_id_c2)
+
+        return {
+           'id'         : self.id,
+           'user_id_c1': user_id_c1.serialize,
+           'user_id_c2': user_id_c2.serialize
+        }
 
 
 class User(db.Model):
@@ -24,22 +39,50 @@ class User(db.Model):
     transactions = db.relationship('Transaction', backref='transaction', lazy='dynamic')
     email = db.Column(db.String(120), unique=True)
     password = db.Column(db.String(120), unique=False)
+    last_login = db.Column(db.DateTime)
+    created_on = db.Column(db.DateTime, default=datetime.now())
+    token = db.Column(db.String(120), unique=True)
+    token_expiration_date = db.Column(db.DateTime)
 
     def __init__(self, username, email, password):
         self.username = username
         self.email = email
-        self.password = password
+        self.password = self.passwordify(password)
 
     def __repr__(self):
         return '<User %r>' % self.username
 
-    def passwordify(self):
-        self.password = (md5(self.email.encode('utf-8')).hexdigest(), 18)
+    def passwordify(self, password):
+        return md5(password + self.email.encode('utf-8')).hexdigest()
+
+    def check_password(self, password):
+        encoded_password = md5(password + self.email.encode('utf-8')).hexdigest()
+
+        if encoded_password == self.password:
+            return True
+
+        return None
 
     def create_couple(self, couple_id):
         couple = Couple(self.id, couple_id)
         db.session.add(couple)
         db.session.commit()
+
+
+    @classmethod
+    def generate_token(cls, user_id):
+
+        token = sha1(os.urandom(128)).hexdigest()
+        user = User.query.get(user_id)
+
+        user.token = token
+        user.token_expiration_date = datetime(year=2099, month=12, day=12, hour=0, minute=0, second=0)
+        user.last_login = datetime.now()
+
+        db.session.add(user)
+        db.session.commit()
+
+        return token
 
     @property
     def serialize(self):
@@ -82,7 +125,7 @@ class Transaction(db.Model):
         return '<Description %r>' % self.description
 
     @classmethod
-    def get_all_by_user_id(self, user_id):
+    def get_all_by_user_id(cls, user_id):
 
         transaction_list = []
         user = User.query.get(user_id)
@@ -140,6 +183,30 @@ class CoupleTransaction(db.Model):
 
     def __repr__(self):
         return '<Description %r>' % self.description
+
+
+    @classmethod
+    def get_all_by_couple_id(self, couple_id):
+
+        transaction_list = []
+        couple = Couple.query.get(couple_id)
+
+        for transaction in couple.transactions.all():
+
+            transaction_dict = {
+                'id': transaction.id,
+                'user_id': transaction.user_id,
+                'couple': couple.serialize,
+                'category': transaction.category,
+                'type': transaction.type,
+                'amount': transaction.amount,
+                'description': transaction.description,
+                'datetime': transaction.datetime.strftime('%m/%d/%Y')
+            }
+
+            transaction_list.append(transaction_dict)
+
+        return transaction_list
 
     @property
     def serialize(self):
