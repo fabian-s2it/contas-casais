@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, session
 from flask.ext import restful
 from flask.ext.sqlalchemy import SQLAlchemy
 from flask.ext.restful import reqparse, abort, Api, Resource
@@ -7,6 +7,7 @@ from models import *
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql://root@127.0.0.1/contas'
+app.secret_key = 'A0Zr98j/3yX R~XHH!jmN]LWX/,?RT'
 
 auth = HTTPBasicAuth()
 
@@ -17,18 +18,15 @@ api = restful.Api(app)
 @auth.verify_password
 def verify_password(username, password):
     user = User.query.filter_by(username=username, password=password).first()
+
     if user:
+        session['username'] = user.username
         return True
     return None
 
 
-class Users(Resource):
-
-    def __init__(self):
-        parser = reqparse.RequestParser()
-        parser.add_argument('username', type=str)
-        parser.add_argument('email', type=str)
-        parser.add_argument('password', type=str)
+#TODO: SEPARATE THEM INTO BLUEPRINTS
+class UsersList(Resource):
 
     @auth.login_required
     def get(self, user_id):
@@ -36,7 +34,7 @@ class Users(Resource):
         return user.serialize
 
 
-class UserList(Resource):
+class Users(Resource):
 
     def __init__(self):
         self.parser = reqparse.RequestParser()
@@ -53,6 +51,7 @@ class UserList(Resource):
 
         return True, 200
 
+#---------------------------------------------------------------------------------
 
 class Transactions(Resource):
 
@@ -64,8 +63,6 @@ class Transactions(Resource):
         self.parser.add_argument('amount', type=float)
         self.parser.add_argument('description', type=str)
 
-
-
     @auth.login_required
     def post(self):
         args = self.parser.parse_args()
@@ -76,9 +73,18 @@ class Transactions(Resource):
         db.session.add(transaction)
         db.session.commit()
 
-api.add_resource(Users, '/users/<user_id>')
-api.add_resource(UserList, '/user/')
+class TransactionsList(Resource):
+
+    @auth.login_required
+    def get(self, user_id):
+        return Transaction.get_all_by_user_id(user_id)
+
+#---------------------------------------------------------------------------------------
+api.add_resource(UsersList, '/users/<user_id>')
+api.add_resource(Users, '/user/')
+
 api.add_resource(Transactions, '/transaction/')
+api.add_resource(TransactionsList, '/transactions/<user_id>')
 
 if __name__ == '__main__':
     app.run(debug=True, port=2323)

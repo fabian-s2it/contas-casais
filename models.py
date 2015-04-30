@@ -50,6 +50,7 @@ class User(db.Model):
            'password': self.password
        }
 
+
     # @property
     # def serialize_many2many(self):
     #    """
@@ -80,10 +81,34 @@ class Transaction(db.Model):
     def __repr__(self):
         return '<Description %r>' % self.description
 
+    @classmethod
+    def get_all_by_user_id(self, user_id):
+
+        transaction_list = []
+        user = User.query.get(user_id)
+
+        for transaction in user.transactions.all():
+
+            transaction_dict = {
+                'id': transaction.id,
+                'user_id': transaction.user_id,
+                'user': user.serialize,
+                'category': transaction.category,
+                'type': transaction.type,
+                'amount': transaction.amount,
+                'description': transaction.description,
+                'datetime': transaction.datetime.strftime('%m/%d/%Y')
+            }
+
+            transaction_list.append(transaction_dict)
+
+        return transaction_list
+
+
     @property
     def serialize(self):
        return {
-           'id'         : self.id,
+           'id': self.id,
            'user_id': self.user_id,
            'category': self.category,
            'type': self.type,
@@ -119,7 +144,7 @@ class CoupleTransaction(db.Model):
     @property
     def serialize(self):
        return {
-           'id'         : self.id,
+           'id': self.id,
            'user_id': self.user_id,
            'couple_id': self.couple_id,
            'category': self.category,
