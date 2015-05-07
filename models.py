@@ -1,7 +1,10 @@
 from hashlib import md5, sha1
-from app import db
+from flask.ext.sqlalchemy import SQLAlchemy
+from sqlalchemy import or_
 from datetime import datetime
 import os
+
+db = SQLAlchemy()
 
 class Couple(db.Model):
 
@@ -83,6 +86,18 @@ class User(db.Model):
         db.session.commit()
 
         return token
+
+    @classmethod
+    def verify_user_exists(cls, username, email):
+
+        user = User.query.filter((User.username == username) | (User.email == email)).first()
+
+        if not user:
+            return False
+
+        return True
+
+
 
     @property
     def serialize(self):

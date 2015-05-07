@@ -1,18 +1,17 @@
 from flask import Flask, session
 from flask.ext import restful
-from flask.ext.sqlalchemy import SQLAlchemy
 from flask.ext.restful import reqparse, abort, Api, Resource
 from flask.ext.httpauth import HTTPBasicAuth
 from models import *
 
-app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql://root@127.0.0.1/contas'
-app.secret_key = 'A0Zr98j/3yX R~XHH!jmN]LWX/,?RT'
+application = Flask(__name__)
+application.config['SQLALCHEMY_DATABASE_URI'] = 'mysql://root@127.0.0.1/contas'
+application.secret_key = 'A0Zr98j/3yX R~XHH!jmN]LWX/,?RT'
 
 auth = HTTPBasicAuth()
 
-db = SQLAlchemy(app)
-api = restful.Api(app)
+db.init_app(application)
+api = restful.Api(application)
 
 
 @auth.verify_password
@@ -57,8 +56,11 @@ class Users(Resource):
         args = self.parser.parse_args()
         user = User(args['username'], args['email'], args['password'])
 
-        db.session.add(user)
-        db.session.commit()
+        if not User.verify_user_exists(user.username, user.email):
+            db.session.add(user)
+            db.session.commit()
+        else:
+            return False, 400
 
         return True, 200
 
@@ -98,4 +100,5 @@ api.add_resource(Transactions, '/transaction/')
 api.add_resource(TransactionsList, '/transactions/<user_id>')
 
 if __name__ == '__main__':
-    app.run(debug=True, port=2323)
+
+    application.run(debug=True, port=2323)
