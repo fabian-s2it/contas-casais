@@ -15,22 +15,14 @@ api = restful.Api(application)
 
 
 @auth.verify_password
-def verify_password(username, password):
-
-    if 'token' not in session:
-        if username and password:
-            user = User.query.filter_by(username=username).first()
-            correct_password = user.check_password(password)
-
-            if correct_password:
-                user.generate_token(user.id)
-                session['token'] = user.token
-        else:
-            return None
-    else:
+def verify_password(token, password):
+    if 'token' in session:
         user = User.query.filter_by(token=session['token']).first()
-    if user:
-        return True
+
+        if user:
+            return True
+    else:
+        return None
 
     return None
 
@@ -59,10 +51,39 @@ class Users(Resource):
         if not User.verify_user_exists(user.username, user.email):
             db.session.add(user)
             db.session.commit()
+
+            user.generate_token(user.id)
+            session['token'] = user.token
+
+            return {'token': user.token}, 200
         else:
             return False, 400
 
-        return True, 200
+
+class UserLogin(Resource):
+
+    def __init__(self):
+        self.parser = reqparse.RequestParser()
+        self.parser.add_argument('username', type=str)
+        self.parser.add_argument('password', type=str)
+
+    def post(self):
+        args = self.parser.parse_args()
+
+        user = User.query.filter_by(username=args['username']).first()
+        correct_password = user.check_password(args['password'])
+
+        if correct_password:
+
+            user.generate_token(user.id)
+            session['token'] = user.token
+
+            return {'token': user.token}, 200
+        else:
+            return False, 400
+
+
+
 
 #---------------------------------------------------------------------------------
 
@@ -98,6 +119,7 @@ api.add_resource(Users, '/user/')
 
 api.add_resource(Transactions, '/transaction/')
 api.add_resource(TransactionsList, '/transactions/<user_id>')
+
 
 if __name__ == '__main__':
 
