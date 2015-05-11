@@ -45,19 +45,23 @@ class Users(Resource):
         self.parser.add_argument('password', type=str)
 
     def post(self):
-        args = self.parser.parse_args()
-        user = User(args['username'], args['email'], args['password'])
+        try:
+            args = self.parser.parse_args()
+            user = User(args['username'], args['email'], args['password'])
 
-        if not User.verify_user_exists(user.username, user.email):
-            db.session.add(user)
-            db.session.commit()
+            if not User.verify_user_exists(user.username, user.email):
+                db.session.add(user)
+                db.session.commit()
 
-            user.generate_token(user.id)
-            session['token'] = user.token
+                user.generate_token(user.id)
+                session['token'] = user.token
+                session['user_id'] = user.id
 
-            return {'token': user.token}, 200
-        else:
-            return False, 400
+                return {'token': user.token, 'user_id': user.id}, 200
+            else:
+                return False, 400
+        except Exception as e:
+            print(e)
 
 
 class UserLogin(Resource):
@@ -82,9 +86,6 @@ class UserLogin(Resource):
         else:
             return False, 400
 
-
-
-
 #---------------------------------------------------------------------------------
 
 class Transactions(Resource):
@@ -106,6 +107,8 @@ class Transactions(Resource):
 
         db.session.add(transaction)
         db.session.commit()
+
+        return 'added', 200
 
 class TransactionsList(Resource):
 
